@@ -21,4 +21,4 @@ jobs:
       - name: Check Black formatting  
         run: black --check .  
       - name: Run Django tests  
-        run: python manage.py test  
+        run: cd src; python manage.py test  
