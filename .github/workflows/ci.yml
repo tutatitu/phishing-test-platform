@@ -7,18 +7,29 @@ on:
 
 jobs:  
   lint-and-test:  
-    runs-on: ubuntu-latest  
+    runs-on: ubuntu-latest
+    env:
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      DEBUG: ${{ secrets.DEBUG }}
+      ALLOWED_HOSTS: ${{ secrets.ALLOWED_HOSTS }}  
+
     steps:  
       - uses: actions/checkout@v4  
+
       - name: Set up Python  
         uses: actions/setup-python@v4  
         with:  
-          python-version: "3.10"  
+          python-version: "3.10" 
+
       - name: Install dependencies  
         run: pip install -r requirements.txt  
+
       - name: Run flake8  
         run: flake8 .  
+
       - name: Check Black formatting  
         run: black --check .  
+
       - name: Run Django tests  
-        run: cd src; python manage.py test  
+        working-directory: ./src 
+        run: python manage.py test

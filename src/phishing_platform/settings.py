@@ -1,10 +1,10 @@
 import environ
 import os
 
-root = environ.Path(__file__) - 2
+root = environ.Path(__file__) - 3
 env = environ.Env()
 
-environ.Env.read_env(env.str(root(), ".env"))
+environ.Env.read_env(env_file=root(".env"))
 
 BASE_DIR = root()
 
