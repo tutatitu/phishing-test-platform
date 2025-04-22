@@ -4,13 +4,13 @@ import os
 root = environ.Path(__file__) - 2
 env = environ.Env()
 
-environ.Env.read_env(env.str(root(), '.env'))
+environ.Env.read_env(env.str(root(), ".env"))
 
 BASE_DIR = root()
 
-SECRET_KEY = env.str('SECRET_KEY')
-DEBUG = env.bool('DEBUG', default=False)
-ALLOWED_HOSTS = env.str('ALLOWED_HOSTS', default='').split(' ')
+SECRET_KEY = env.str("SECRET_KEY")
+DEBUG = env.bool("DEBUG", default=False)
+ALLOWED_HOSTS = env.str("ALLOWED_HOSTS", default="").split(" ")
 
 # Application definition
 
@@ -21,7 +21,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "core"
+    "core",
 ]
 
 MIDDLEWARE = [
@@ -39,7 +39,9 @@ ROOT_URLCONF = "phishing_platform.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [os.path.join(BASE_DIR, "core", "templates"), ],
+        "DIRS": [
+            os.path.join(BASE_DIR, "core", "templates"),
+        ],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
