@@ -62,9 +62,13 @@ WSGI_APPLICATION = "phishing_platform.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": "db.sqlite3",
-    }
+        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        "NAME": env.str("PG_DATABASE", "postgres"),
+        "USER": env.str("PG_USER", "postgres"),
+        "PASSWORD": env.str("PG_PASSWORD", "postgres"),
+        "HOST": env.str("DB_HOST", "localhost"),
+        "PORT": env.int("DB_PORT", 5432),
+    },
 }
 
 
@@ -92,7 +96,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Europe/Moscow"
 
 USE_I18N = True
 

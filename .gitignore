@@ -136,3 +136,19 @@ GitHub.sublime-settings
 !.vscode/launch.json 
 !.vscode/extensions.json 
 .history
+
+# Pyre type checker
+.pyre/
+
+**/static/admin
+**/static/rest_framework
+
+media/
+/media/
+*/media/
+
+**/migrations/*
+!*/migrations/__init__.py
+*.session
+*.json
+images
