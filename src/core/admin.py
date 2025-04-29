@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Campaign, ClickEvent, CoreSettings, Target
+from .models import Campaign, ClickEvent, CoreSettings, EmailTemplate, Target
 
 admin.site.register(CoreSettings)
 
@@ -25,3 +25,8 @@ class TargetAdmin(admin.ModelAdmin):
 @admin.register(ClickEvent)
 class ClickEventAdmin(admin.ModelAdmin):
     list_display = ("target", "clicked_at")
+
+
+@admin.register(EmailTemplate)
+class EmailTemplateAdmin(admin.ModelAdmin):
+    list_display = ("subject", "campaign")
