@@ -11,8 +11,14 @@ def send_phishing_email(sender, instance, created, **kwargs):
     if created:
         template = EmailTemplate.objects.get(campaign=instance.campaign)
         subject = template.subject
-        tracking_link = f"http://127.0.0.1:8000/track/{instance.unique_token}/"
-        body = template.body.replace("{{ tracking_link }}", tracking_link)
+
+        address = settings.ADDRESS
+        track_open = f"{address}/track-open/{instance.unique_token}/"
+        body = template.body.replace("{{ track_open }}", track_open)
+
+        track_click = f"{address}/track-click/{instance.unique_token}/"
+        body = body.replace("{{ track_click }}", track_click)
+        print(body)
         from_email = settings.EMAIL_HOST_USER
         to_email = instance.email
         email = EmailMessage(

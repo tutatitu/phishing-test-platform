@@ -20,6 +20,8 @@ class Target(models.Model):
     email = models.EmailField(unique=True)
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE)
     unique_token = models.UUIDField(default=uuid.uuid4, editable=False)
+    email_opened = models.BooleanField(default=False)
+    opened_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.email} ({self.campaign.name})"
