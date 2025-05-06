@@ -14,6 +14,7 @@ jobs:
       ALLOWED_HOSTS: ${{ secrets.ALLOWED_HOSTS }}  
       EMAIL_HOST_USER: ${{ secrets.EMAIL_HOST_USER }}
       EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
+      ADDRESS: ${{ secrets.ADDRESS }}
 
     steps:  
       - uses: actions/checkout@v4  
