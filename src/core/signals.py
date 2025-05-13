@@ -1,15 +1,15 @@
-from django.db.models.signals import pre_save
+from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.core.mail import EmailMessage
-from django.db import connection, transaction
+from django.db import connection
 
 from core.models import EmailLog, EmailTemplate, Target
+from core.tasks import send_phishing_email_task
 from phishing_platform import settings
 
 
-@receiver(pre_save, sender=Target)
-def handle_target_creation(sender, instance, **kwargs):
-    if instance.pk is None:
+@receiver(post_save, sender=Target)
+def handle_target_creation(sender, instance, created, **kwargs):
+    if created:
         try:
             template = EmailTemplate.objects.get(campaign=instance.campaign)
             subject = template.subject
@@ -20,32 +20,22 @@ def handle_target_creation(sender, instance, **kwargs):
             body = body.replace("{{ track_click }}", track_click)
             from_email = settings.EMAIL_HOST_USER
             to_email = instance.email
-            email_message = EmailMessage(subject, body, from_email, [to_email])
-            email_message.content_subtype = "html"
-            email_message.send()
-
-            transaction.on_commit(
-                lambda: EmailLog.objects.create(
-                    email=instance.email,
-                    campaign_name=instance.campaign.name,
-                    event_type="SENT",
-                    details="Email has been sent successfully",
-                )
+            send_phishing_email_task.delay(
+                subject, body, from_email, to_email, target_id=instance.id
             )
 
         except Exception as e:
-            email = instance.email
-            campaign_name = instance.campaign.name if instance.campaign else "Unknown"
-
             connection.autocommit = False
             EmailLog.objects.create(
-                email=email,
-                campaign_name=campaign_name,
+                email=instance.email,
+                campaign_name=instance.campaign.name
+                if instance.campaign
+                else "Unknown",
                 event_type="FAILED",
-                details=f"Error: {str(e)}",
+                details=f"Template error: {str(e)}",
             )
-
             connection.connection.commit()
             connection.autocommit = True
 
+            instance.delete()
             raise Exception(f"Error: {str(e)}")
