@@ -1,13 +1,31 @@
+from celery import group
 from django.contrib import admin
 
+from core.tasks import send_phishing_email_task
 from phishing_platform import settings
 from .models import Campaign, CoreSettings, EmailLog, EmailTemplate, Target
 
 admin.site.register(CoreSettings)
 
 
+@admin.action(description="📧 Start mailing")
+def start_mailing(modeladmin, request, queryset):
+    for campaign in queryset:
+        targets = campaign.target_set.all()
+        if not targets.exists():
+            continue
+
+        tasks = group(
+            send_phishing_email_task.s(campaign_id=campaign.id, target_id=target.id)
+            for target in targets
+        )
+        tasks.apply_async(queue="email_tasks")
+
+
 @admin.register(Campaign)
 class CampaignAdmin(admin.ModelAdmin):
+    actions = [start_mailing]
+
     def failed(self, obj):
         return EmailLog.objects.filter(
             campaign_name=obj.name, event_type="FAILED"
@@ -39,8 +57,18 @@ class CampaignAdmin(admin.ModelAdmin):
     )
 
 
+@admin.action(description="📧 Send email")
+def send_email_to_target(modeladmin, request, queryset):
+    tasks = group(
+        send_phishing_email_task.s(campaign_id=target.campaign.id, target_id=target.id)
+        for target in queryset
+    )
+    tasks.apply_async(queue="email_tasks")
+
+
 @admin.register(Target)
 class TargetAdmin(admin.ModelAdmin):
+    actions = [send_email_to_target]
     list_display = ("email", "campaign", "get_click_link", "get_open_link")
     address = settings.ADDRESS
 

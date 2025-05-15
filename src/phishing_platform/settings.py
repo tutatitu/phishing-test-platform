@@ -135,3 +135,11 @@ CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/0"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
+CELERY_DEFAULT_QUEUE = "default"
+CELERY_QUEUES = {
+    "email_tasks": {
+        "exchange": "email_tasks",
+        "exchange_type": "direct",
+        "routing_key": "email_tasks",
+    }
+}
