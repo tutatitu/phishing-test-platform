@@ -107,6 +107,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = "static/"
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, "src/static"),
+]
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 
 # Default primary key field type
@@ -143,3 +148,11 @@ CELERY_QUEUES = {
         "routing_key": "email_tasks",
     }
 }
+
+
+# Auth
+# https://docs.djangoproject.com/en/5.2/topics/auth/
+
+LOGIN_REDIRECT_URL = "/dashboard/"
+LOGOUT_REDIRECT_URL = "login"
+AUTH_USER_MODEL = "core.CustomUser"

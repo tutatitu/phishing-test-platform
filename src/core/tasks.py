@@ -1,16 +1,16 @@
 from celery import shared_task
 from django.core.mail import EmailMessage
 
-from core.models import Campaign, EmailLog, EmailTemplate, Target
+from core.models import Company, EmailLog, EmailTemplate, Target
 from phishing_platform import settings
 
 
 @shared_task
-def send_phishing_email_task(campaign_id, target_id):
+def send_phishing_email_task(company_id, target_id):
     try:
-        campaign = Campaign.objects.get(id=campaign_id)
+        company = Company.objects.get(id=company_id)
         target = Target.objects.get(id=target_id)
-        template = EmailTemplate.objects.get(campaign=campaign)
+        template = EmailTemplate.objects.get(company=company)
         subject = template.subject
         address = settings.ADDRESS
         track_open = f"{address}/track-open/{target.unique_token}/"
@@ -26,7 +26,7 @@ def send_phishing_email_task(campaign_id, target_id):
 
         EmailLog.objects.create(
             email=to_email,
-            campaign_name=campaign.name,
+            company_name=company.name,
             event_type="SENT",
             details="Email has been sent successfully",
         )
@@ -34,13 +34,13 @@ def send_phishing_email_task(campaign_id, target_id):
     except Exception as e:
         try:
             target = Target.objects.get(id=target_id)
-            campaign_name = campaign.name if campaign else "Unknown"
+            company_name = company.name if company else "Unknown"
         except Target.DoesNotExist:
-            campaign_name = "Unknown"
+            company_name = "Unknown"
 
         EmailLog.objects.create(
             email=target.email if "target" in locals() else "unknown@example.com",
-            campaign_name=campaign_name,
+            company_name=company_name,
             event_type="FAILED",
             details=f"Error: {str(e)}",
         )
