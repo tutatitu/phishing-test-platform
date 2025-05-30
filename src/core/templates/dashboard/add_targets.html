@@ -1,0 +1,38 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load static %}
+
+{% block title %}Phishing Platform{% endblock %}
+
+{% block content %}
+<div class="p-4">
+    <h2 class="mb-4">Add targets</h2>
+    
+    <form method="post" enctype="multipart/form-data" class="mb-4">
+        {% csrf_token %}
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">From CSV</h5>
+                <input type="file" name="csv_file" class="form-control" accept=".csv" required>
+                <button type="submit" class="btn btn-success mt-3">Upload</button>
+            </div>
+        </div>
+    </form>
+    
+    <form method="post">
+        {% csrf_token %}
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Manually</h5>
+                <textarea 
+                    name="emails" 
+                    class="form-control" 
+                    rows="5" 
+                    placeholder="user1@example.com, user2@example.com"
+                    required
+                ></textarea>
+                <button type="submit" class="btn btn-success mt-3">Add</button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

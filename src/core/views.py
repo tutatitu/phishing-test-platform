@@ -1,12 +1,24 @@
-from django import forms
+import csv
+from celery import group
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse_lazy
 from django.utils import timezone
-from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.contrib.auth import login
-from core.forms import CompanyCreationForm, CustomUserCreationForm
-from core.models import Company, EmailLog, Target
+from django.views import View
+from core.forms import (
+    AddTargetsForm,
+    CompanyCreationForm,
+    CustomUserCreationForm,
+    SendEmailForm,
+)
+from core.models import EmailLog, EmailTemplate, Target
 from django.views.generic import CreateView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import TemplateView, UpdateView, ListView
+
+from core.tasks import send_phishing_email_task
 
 
 class SignUpView(CreateView):
@@ -25,41 +37,269 @@ class SignUpCompanyView(CreateView):
 
     def form_valid(self, form):
         form.instance.owner = self.request.user
-        form.instance.save()
-        return redirect("dashboard_home")
+        company = form.save()
+        template = EmailTemplate.objects.create(
+            company=company,
+            subject="Подтверждение аккаунта",
+            body="""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Обновление политики безопасности</title>
+</head>
+<body style="font-family: Arial, sans-serif;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <!-- Заголовок с логотипом -->
+        <header style="text-align: center; margin-bottom: 30px;">
+            <img src="https://example.com/logo.png" alt="Логотип компании" style="max-width: 200px;">
+            <h1 style="color: #2c3e50;">Обновление политики безопасности</h1>
+        </header>
+    <!-- Основной текст -->
+    <div style="line-height: 1.6;">
+        <p>Уважаемый сотрудник,</p>
+
+        <p>В связи с последними изменениями в требованиях информационной безопасности,
+        вам необходимо подтвердить свои учетные данные в течение 24 часов.</p>
+
+        <p style="text-align: center; margin: 30px 0;">
+            <a href="{{ track_click }}"
+            style="background-color: #3498db;
+                    color: white;
+                    padding: 12px 25px;
+                    text-decoration: none;
+                    border-radius: 5px;">
+                Подтвердить сейчас
+            </a>
+        </p>
+
+        <p>Если вы не запрашивали это обновление, проигнорируйте данное письмо.</p>
+    </div>
+
+    <!-- Подпись -->
+    <footer style="margin-top: 40px;
+                border-top: 1px solid #ecf0f1;
+                padding-top: 20px;
+                color: #7f8c8d;">
+        <p>С уважением,<br>
+        Отдел информационной безопасности<br>
+    </p>
+        <img src="{{ track_open }}"
+            width="1" height="1"
+            alt=""
+            style="display: none;">
+    </footer>
+</div>
+</body>
+</html> """,
+        )
+        company.template = template
+        company.save()
+        return redirect("verify_wait")
 
 
-class AddTargetsForm(forms.Form):
-    company = forms.ModelChoiceField(queryset=Company.objects.none())
-    emails = forms.CharField(
-        widget=forms.Textarea, help_text="Введите email'ы через запятую"
-    )
+class VerifyWaitView(TemplateView):
+    template_name = "dashboard/verify_wait.html"
 
 
-@login_required
-def dashboard_home(request):
-    companies = Company.objects.filter(owner=request.user)
-    return render(request, "dashboard_home.html", {"companies": companies})
+class DashboardView(LoginRequiredMixin, TemplateView):
+    template_name = "dashboard/base_dashboard.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.company.is_verified:
+            return redirect("verify_wait")
+        return super().dispatch(request, *args, **kwargs)
+
+    # def get_context_data(self, **kwargs):
+    #     context = super().get_context_data(**kwargs)
+    #     company = self.request.user.company
+    #     context["company"] = company
+    #     context["companies"] = Company.objects.filter(owner=self.request.user)
+    #     context["logs"] = EmailLog.objects.filter(company_name=company.name)[:10]
+    #     context["template"] = EmailTemplate.objects.filter(company=self.request.user.company)
+    #     context["stats"] = {
+    #         "total_targets": company.target_set.count(),
+    #         "sent_emails": EmailLog.objects.filter(event_type="SENT").count(),
+    #         "opened_emails": EmailLog.objects.filter(event_type="OPENED").count(),
+    #     }
+    #     # print(EmailLog.objects.filter(company_name=company.name)[:10])
+    #     return context
+
+
+class AddTargetsView(LoginRequiredMixin, View):
+    template_name = "dashboard/add_targets.html"
+    success_url = reverse_lazy("dashboard")
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.company.is_verified:
+            return redirect("verify_wait")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        return render(request, self.template_name, {"form": AddTargetsForm()})
+
+    def post(self, request, *args, **kwargs):
+        company = request.user.company
+
+        if "csv_file" in request.FILES:
+            csv_file = request.FILES["csv_file"]
+            decoded_file = csv_file.read().decode("utf-8")
+            reader = csv.DictReader(decoded_file.splitlines())
+
+            for row in reader:
+                email = row.get("email")
+                if email:
+                    Target.objects.create(email=email.strip(), company=company)
+            return redirect(self.success_url)
+
+        if "emails" in request.POST:
+            form = AddTargetsForm(request.POST)
+            if form.is_valid():
+                emails = form.cleaned_data["emails"]
+                Target.objects.bulk_create(
+                    [Target(email=email, company=company) for email in emails]
+                )
+                return redirect(self.success_url)
+            else:
+                return render(request, self.template_name, {"form": form})
+
+        return redirect(self.success_url)
+
+
+class EditTemplateView(LoginRequiredMixin, UpdateView):
+    model = EmailTemplate
+    template_name = "dashboard/edit_template.html"
+    fields = ["subject", "body"]
+    success_url = reverse_lazy("dashboard")
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.company.is_verified:
+            return redirect("verify_wait")
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        form.instance.company = self.request.user.company
+        form.template = self.request.user.company.template
+
+        # template = form.save(commit=False)
+        # template.company = self.request.user.company
+        # template.save()
+        return super().form_valid(form)
+
+    def get_object(self, queryset=None):
+        return self.request.user.company.template
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        company = self.request.user.company
+        context["template"] = company.template
+
+        return context
+
+
+class SendEmailView(LoginRequiredMixin, View):
+    template_name = "dashboard/send_email.html"
+    success_url = reverse_lazy("dashboard")
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.company.is_verified:
+            return redirect("verify_wait")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        form = SendEmailForm(user=request.user)
+        company = request.user.company
+        return render(request, self.template_name, {"form": form, "company": company})
+
+    def post(self, request, *args, **kwargs):
+        company = request.user.company
+        action = request.POST.get("action")  # "send" or "delete"
+        selected_targets = request.POST.getlist("targets")  # список ID целей
+
+        if not selected_targets:
+            messages.warning(request, "Select at least one target.")
+            return redirect(request.path)
+
+        if action == "delete":
+            Target.objects.filter(id__in=selected_targets, company=company).delete()
+            messages.success(request, "Selected targets have been deleted.")
+            return redirect(request.path)
+
+        elif action == "send":
+            form = SendEmailForm(request.POST, user=request.user)
+            if form.is_valid():
+                targets = Target.objects.filter(
+                    id__in=selected_targets, company=company
+                )
+
+                tasks = group(
+                    send_phishing_email_task.s(
+                        company_id=company.id, target_id=target.id
+                    )
+                    for target in targets
+                )
+                tasks.apply_async(queue="email_tasks")
+
+                messages.success(
+                    request, "Email have been sent to the selected targets."
+                )
+                return redirect(request.path)
+        else:
+            messages.error(request, "Unknown action.")
+            return redirect(request.path)
+
+
+class EmailLogsView(LoginRequiredMixin, ListView):
+    template_name = "dashboard/email_logs.html"
+    model = EmailLog
+    paginate_by = 20
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.company.is_verified:
+            return redirect("verify_wait")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        company = self.request.user.company
+        context["logs"] = EmailLog.objects.filter(company_name=company.name).order_by(
+            "-timestamp"
+        )
+
+        return context
+
+
+class CompanyStatsView(LoginRequiredMixin, TemplateView):
+    template_name = "dashboard/company_stats.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.company.is_verified:
+            return redirect("verify_wait")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        company = self.request.user.company
+        context["company"] = company
+        context["stats"] = {
+            "sent": EmailLog.objects.filter(
+                event_type="SENT", company_name=company.name
+            ).count(),
+            "opened": EmailLog.objects.filter(
+                event_type="OPENED", company_name=company.name
+            ).count(),
+            "clicked": EmailLog.objects.filter(
+                event_type="CLICKED", company_name=company.name
+            ).count(),
+            "failed": EmailLog.objects.filter(
+                event_type="FAILED", company_name=company.name
+            ).count(),
+            "total": company.target_set.count(),
+        }
+        return context
 
 
 def home(request):
     return render(request, "home.html")
-
-
-@login_required
-def add_targets(request):
-    form = AddTargetsForm(request.POST or None)
-    form.fields["company"].queryset = Company.objects.filter(owner=request.user)
-
-    if request.method == "POST" and form.is_valid():
-        company = form.cleaned_data["company"]
-        emails = form.cleaned_data["emails"].split(",")
-        for email in emails:
-            print(email)
-            Target.objects.create(email=email.strip(), company=company)
-        return redirect("dashboard_home")
-
-    return render(request, "add_targets.html", {"form": form})
 
 
 def track_email_open(request, token):

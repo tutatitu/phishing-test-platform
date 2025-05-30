@@ -1,0 +1,111 @@
+/* Основные настройки */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Верхнее меню */  
+.navbar {
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    height: 56px;
+    padding-right: 60px;
+    padding-left: 40px;
+}
+
+/* Боковое меню */
+.sidebar {
+    width: 250px;
+    position: fixed;
+    top: 56px;
+    left: 0;
+    bottom: 0;
+    z-index: 1000;
+    overflow-y: auto;
+    background-color: #fff;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.sidebar .nav-link {
+    color: #333;
+    padding: 12px 20px;
+    border-radius: 5px;
+    margin: 5px 15px;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.sidebar .nav-link:hover {
+    background: #e9ecef;
+    transform: translateX(5px);
+}
+
+/* Основной контент */
+.main-content {
+    margin-left: 250px;
+    padding: 30px 40px;
+    min-height: calc(100vh - 56px);
+    flex-grow: 1;
+}
+
+.container {
+    margin: 0 0;
+}
+
+.container-fluid {
+    padding-top: 26px;
+}
+
+/* Исправление для основного контента */
+.main-content > .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0;
+}
+
+/* Карточки */
+.card {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #ffffff;
+}
+
+/* Адаптивность */
+@media (max-width: 992px) {
+    .sidebar {
+        transform: translateX(-100%);
+    }
+    
+    .sidebar.active {
+        transform: translateX(0);
+    }
+    
+    .main-content {
+        margin-left: 0;
+        padding: 20px;
+    }
+    
+    .navbar-brand {
+        font-size: 1rem;
+    }
+}
+
+/* Сообщения */
+.alert {
+    max-width: 1200px;
+    /* margin: 20px auto 0; */
+    /* margin: 0 0; */
+}
+
