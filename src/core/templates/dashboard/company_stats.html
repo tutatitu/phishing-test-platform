@@ -1,0 +1,105 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load static %}
+{% block content %}
+<div class="p-4">
+    <h2 class="mb-4">{{ company.name }}</h2>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Sent</h5>
+                    <p class="card-text display-6">{{ stats.sent }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">Opened</h5>
+                    <p class="card-text display-6">{{ stats.opened }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-primary text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">Clicked</h5>
+                    <p class="card-text display-6">{{ stats.clicked }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-danger text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">Failed</h5>
+                    <p class="card-text display-6">{{ stats.failed }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Email openings</h5>
+                    <canvas id="openChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Link clicks</h5>
+                    <canvas id="clickChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{ stats|json_script:"stats-data" }}
+</div>
+
+<script>
+    const stats = JSON.parse(document.getElementById('stats-data').textContent);
+    
+    new Chart(document.getElementById("openChart"), {
+        type: "doughnut",
+        data: {
+            labels: ["Opened", "Not opened"],
+            datasets: [{
+                data: [stats.opened, stats.total - stats.opened],
+                backgroundColor: ["#28a745", "#6c757d"]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    new Chart(document.getElementById("clickChart"), {
+        type: "pie",
+        data: {
+            labels: ["Clicked", "Not clicked"],
+            datasets: [{
+                data: [stats.clicked, stats.total - stats.clicked],
+                backgroundColor: ["#ffc107", "#6c757d"]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Phishing Platform{% endblock %}
+
+{% block content %}
+<div class="text-center mt-5">
+  <h3>Your company is under review</h3>
+  <p>Please wait for verification by the administrator</p>
+  <a href="{% url 'logout' %}" class="btn btn-outline-secondary">Log out</a>
+</div>
+{% endblock %}
