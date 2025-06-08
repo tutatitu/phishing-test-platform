@@ -109,21 +109,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             return redirect("verify_wait")
         return super().dispatch(request, *args, **kwargs)
 
-    # def get_context_data(self, **kwargs):
-    #     context = super().get_context_data(**kwargs)
-    #     company = self.request.user.company
-    #     context["company"] = company
-    #     context["companies"] = Company.objects.filter(owner=self.request.user)
-    #     context["logs"] = EmailLog.objects.filter(company_name=company.name)[:10]
-    #     context["template"] = EmailTemplate.objects.filter(company=self.request.user.company)
-    #     context["stats"] = {
-    #         "total_targets": company.target_set.count(),
-    #         "sent_emails": EmailLog.objects.filter(event_type="SENT").count(),
-    #         "opened_emails": EmailLog.objects.filter(event_type="OPENED").count(),
-    #     }
-    #     # print(EmailLog.objects.filter(company_name=company.name)[:10])
-    #     return context
-
 
 class AddTargetsView(LoginRequiredMixin, View):
     template_name = "dashboard/add_targets.html"
@@ -179,10 +164,6 @@ class EditTemplateView(LoginRequiredMixin, UpdateView):
     def form_valid(self, form):
         form.instance.company = self.request.user.company
         form.template = self.request.user.company.template
-
-        # template = form.save(commit=False)
-        # template.company = self.request.user.company
-        # template.save()
         return super().form_valid(form)
 
     def get_object(self, queryset=None):
@@ -212,8 +193,8 @@ class SendEmailView(LoginRequiredMixin, View):
 
     def post(self, request, *args, **kwargs):
         company = request.user.company
-        action = request.POST.get("action")  # "send" or "delete"
-        selected_targets = request.POST.getlist("targets")  # список ID целей
+        action = request.POST.get("action")
+        selected_targets = request.POST.getlist("targets")
 
         if not selected_targets:
             messages.warning(request, "Select at least one target.")

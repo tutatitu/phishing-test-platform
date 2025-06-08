@@ -6,10 +6,8 @@
 {% block content %}
 <div class="p-4">
     <h2 class="mb-4">Mailing</h2>
-    
     <form method="post">
         {% csrf_token %}
-        <!-- Таблица участников -->
         <table class="table table-hover">
             <thead>
                 <tr>
@@ -24,22 +22,15 @@
                     <td><input type="checkbox" name="targets" value="{{ target.id }}"></td>
                     <td>{{ target.email }}</td>
                     <td>
-                        {% if target.is_sent %}
-                            +
-                        {% else %}
-                            -
-                        {% endif %}
+                        {% if target.is_sent %} + {% else %}-{% endif %}
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-
-        <!-- Кнопки действий -->
         <button type="submit" name="action" value="send" class="btn btn-success">Send selected</button>
         <button type="submit" name="action" value="delete" class="btn btn-danger">Delete selected</button>
     </form>
-
     <script>
         document.getElementById('select-all').addEventListener('change', function () {
             let checkboxes = document.querySelectorAll('input[name="targets"]');

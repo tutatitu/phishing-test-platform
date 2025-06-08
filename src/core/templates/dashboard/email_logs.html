@@ -22,7 +22,16 @@
                     <td>{{ log.timestamp }}</td>
                     <td>{{ log.email }}</td>
                     <td>
-                        <span class="badge {% if log.event_type == 'SENT' %}bg-success{% elif log.event_type == 'OPENED' %}bg-warning{% elif log.event_type == 'CLICKED' %}bg-primary{% else %}bg-danger{% endif %}">
+                        <span class="badge 
+                        {% if log.event_type == 'SENT' %}
+                        bg-success
+                        {% elif log.event_type == 'OPENED' %}
+                        bg-warning
+                        {% elif log.event_type == 'CLICKED' %}
+                        bg-primary
+                        {% else %}
+                        bg-danger
+                        {% endif %}">
                             {{ log.get_event_type_display }}
                         </span>
                     </td>

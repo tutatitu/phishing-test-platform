@@ -61,11 +61,9 @@
     {{ stats|json_script:"stats-data" }}
 </div>
 
-<script src="{% static 'chart.js/dist/chart.umd.js' %}"></script>
 <script>
     const stats = JSON.parse(document.getElementById('stats-data').textContent);
-
-
+    
     new Chart(document.getElementById("openChart"), {
         type: "doughnut",
         data: {
@@ -85,7 +83,6 @@
         }
     });
 
-    // График: Клики
     new Chart(document.getElementById("clickChart"), {
         type: "pie",
         data: {
